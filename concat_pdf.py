@@ -8,6 +8,7 @@ from pathlib import Path
 src_path = Path(__file__).parent / "src"
 sys.path.insert(0, str(src_path))
 
+# Import the module directly
 from concat_pdf import main
 
 if __name__ == "__main__":
