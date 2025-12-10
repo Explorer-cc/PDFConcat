@@ -94,7 +94,7 @@ class PDFThumbnailApp:
                                    command=self.auto_calculate_rows)
         auto_calc_btn.grid(row=0, column=5)
 
-        # Note: Page size is automatically calculated to fit the content
+        # Page size is automatically calculated to fit the content
 
         # Quality settings
         quality_frame = ttk.Frame(param_frame)
@@ -148,14 +148,14 @@ class PDFThumbnailApp:
         preset_frame.grid(row=4, column=0, columnspan=3, pady=(10, 0))
 
         ttk.Label(preset_frame, text="Quick Presets:").grid(row=0, column=0, sticky=tk.W)
-        ttk.Button(preset_frame, text="A4 Landscape 3×2",
-                  command=lambda: self.apply_preset(3, 2, "A4", "landscape")).grid(row=0, column=1, padx=(10, 5))
-        ttk.Button(preset_frame, text="A4 Landscape 4×3",
-                  command=lambda: self.apply_preset(4, 3, "A4", "landscape")).grid(row=0, column=2, padx=(5, 5))
-        ttk.Button(preset_frame, text="A3 Landscape 5×3",
-                  command=lambda: self.apply_preset(5, 3, "A3", "landscape")).grid(row=0, column=3, padx=(5, 5))
+        ttk.Button(preset_frame, text="3×2 Grid",
+                  command=lambda: self.apply_preset(3, 2)).grid(row=0, column=1, padx=(10, 5))
+        ttk.Button(preset_frame, text="4×3 Grid",
+                  command=lambda: self.apply_preset(4, 3)).grid(row=0, column=2, padx=(5, 5))
+        ttk.Button(preset_frame, text="5×3 Grid",
+                  command=lambda: self.apply_preset(5, 3)).grid(row=0, column=3, padx=(5, 5))
         ttk.Button(preset_frame, text="Auto Layout",
-                  command=lambda: self.apply_preset(4, None, "Auto", "landscape")).grid(row=0, column=4, padx=(5, 0))
+                  command=lambda: self.apply_preset(4, None)).grid(row=0, column=4, padx=(5, 0))
 
     def select_input_file(self):
         filename = filedialog.askopenfilename(
@@ -202,7 +202,7 @@ class PDFThumbnailApp:
         except Exception as e:
             messagebox.showerror("Error", f"Cannot read PDF file: {str(e)}")
 
-    def apply_preset(self, columns, rows, page_size, orientation):
+    def apply_preset(self, columns, rows):
         """Apply preset configuration"""
         self.columns.set(columns)
         if rows is not None:
@@ -258,7 +258,7 @@ class PDFThumbnailApp:
             self.update_progress(10, "Reading PDF file...")
 
             # Call core processing function
-            # Note: page_size=None makes the program auto-calculate the optimal page size
+            # Page size is automatically calculated to fit the content
             process_pdf(
                 input_path=Path(self.input_path.get()),
                 output_path=Path(self.output_path.get()),
@@ -329,10 +329,10 @@ class PDFThumbnailApp:
 def main():
     root = tk.Tk()
 
-    # 设置样式
+    # Set up style
     style = ttk.Style(root)
 
-    # 根据系统选择主题
+    # Select theme based on system
     if sys.platform == 'win32':
         try:
             style.theme_use('vista')
@@ -342,10 +342,10 @@ def main():
             except:
                 style.theme_use('default')
 
-    # 创建应用
+    # Create app
     app = PDFThumbnailApp(root)
 
-    # 设置拖放（需要额外实现）
+    # Set up drag and drop (requires additional implementation)
     root.mainloop()
 
 
