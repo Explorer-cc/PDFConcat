@@ -164,7 +164,7 @@ def process_pdf(
 
 
 def main():
-    parser = argparse.ArgumentParser(description="PDF Thumbnail Grid Tool - Auto-calculate page size")
+    parser = argparse.ArgumentParser(description="PDFConcat - Auto-calculate page size")
     parser.add_argument("input", type=Path, help="Input PDF file path")
     parser.add_argument("output", type=Path, help="Output PDF file path")
     parser.add_argument("-n", "--columns", type=int, required=True, help="Number of grid columns")

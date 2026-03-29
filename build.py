@@ -18,7 +18,7 @@ def clean_build_dirs():
             shutil.rmtree(dir_path)
 
     # Clean .spec file
-    spec_file = Path("pdf_thumbnail.spec")
+    spec_file = Path("PDFConcat.spec")
     if spec_file.exists():
         spec_file.unlink()
 
@@ -36,7 +36,7 @@ def build_executable():
     # PyInstaller command parameters
     cmd = [
         sys.executable, "-m", "PyInstaller",
-        "--name", "PDF Thumbnail Grid Tool",
+        "--name", "PDFConcat",
         "--onefile",  # Package into single file
         "--windowed",  # Hide console window
         "--icon=NONE",  # Icon file (set to NONE if no icon)
@@ -59,7 +59,7 @@ def build_executable():
 
     if result.returncode == 0:
         print("\n[Success] Build completed successfully!")
-        print(f"Executable file located at: {Path('dist/PDF Thumbnail Grid Tool.exe').absolute()}")
+        print(f"Executable file located at: {Path('dist/PDFConcat.exe').absolute()}")
 
         # Create portable package
         create_portable_package()
@@ -70,14 +70,14 @@ def build_executable():
 
 def create_portable_package():
     """Create portable package"""
-    portable_dir = Path("PDF Thumbnail Grid Tool_Portable")
+    portable_dir = Path("PDFConcat_Portable")
     if portable_dir.exists():
         shutil.rmtree(portable_dir)
 
     portable_dir.mkdir()
 
     # Copy executable file
-    exe_path = Path("dist/PDF Thumbnail Grid Tool.exe")
+    exe_path = Path("dist/PDFConcat.exe")
     shutil.copy2(exe_path, portable_dir)
 
     # Create example files and documentation
@@ -88,7 +88,7 @@ def create_portable_package():
 
 def create_readme(output_dir: Path):
     """Create documentation"""
-    readme_content = """# PDF Thumbnail Grid Tool v0.9.9
+    readme_content = """# PDFConcat v0.9.9
 
 ## Description
 This is an easy-to-use Windows desktop application that creates thumbnail grids from PDF pages and arranges them in a new PDF file with customizable grid layouts.
@@ -150,7 +150,7 @@ This is an easy-to-use Windows desktop application that creates thumbnail grids 
 ## Change Log
 v0.9.9 (2024-12-10)
 - Beta version release
-- Support for basic PDF thumbnail grid functionality
+- Support for basic PDF grid concatenation functionality
 - Graphical user interface
 - Multiple configuration options
 
@@ -168,8 +168,8 @@ The program is developed based on Python, using PyMuPDF for PDF processing.
 
     # Create an example batch file for quick launching
     bat_content = """@echo off
-echo Starting PDF Thumbnail Grid Tool...
-start "" "PDF Thumbnail Grid Tool.exe"
+echo Starting PDFConcat...
+start "" "PDFConcat.exe"
 """
     bat_path = output_dir / "Launch Program.bat"
     with open(bat_path, 'w', encoding='utf-8') as f:
@@ -178,7 +178,7 @@ start "" "PDF Thumbnail Grid Tool.exe"
 
 def main():
     print("=" * 50)
-    print("PDF Thumbnail Grid Tool - Build Script")
+    print("PDFConcat - Build Script")
     print("=" * 50)
 
     # Check if in the correct directory

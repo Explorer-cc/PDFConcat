@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Convenient entry script for PDF Thumbnail Grid Tool"""
+"""Convenient entry script for PDFConcat"""
 
 import sys
 from pathlib import Path
