@@ -3,9 +3,17 @@ from tkinter import ttk, filedialog, messagebox
 from tkinterdnd2 import DND_FILES, TkinterDnD
 import threading
 import sys
+import ctypes
 from pathlib import Path
 from typing import Optional
 import webbrowser
+
+# Enable DPI awareness for crisp rendering on high-DPI displays
+if sys.platform == 'win32':
+    try:
+        ctypes.windll.shcore.SetProcessDpiAwareness(1)
+    except Exception:
+        pass
 
 # Import core functionality
 sys.path.insert(0, str(Path(__file__).parent))
@@ -46,7 +54,7 @@ class PDFConcatApp:
 
         # Title
         title_label = ttk.Label(main_frame, text="PDFConcat",
-                                font=('Arial', 16, 'bold'))
+                                font=('Segoe UI', 16, 'bold'))
         title_label.grid(row=0, column=0, columnspan=3, pady=(0, 20))
 
         # File selection area
@@ -73,7 +81,7 @@ class PDFConcatApp:
 
         # File drag and drop tip
         drag_label = ttk.Label(file_frame, text="Tip: You can drag and drop PDF files to the input box",
-                               font=('Arial', 9), foreground='gray')
+                               font=('Segoe UI', 9), foreground='gray')
         drag_label.grid(row=4, column=0, columnspan=2, pady=(5, 0))
 
         # Parameter configuration area
@@ -130,7 +138,7 @@ class PDFConcatApp:
         self.progress_bar.grid(row=0, column=0, columnspan=2, pady=(0, 10), sticky=(tk.W, tk.E))
 
         # Status label
-        self.status_label = ttk.Label(action_frame, text="Ready", font=('Arial', 9))
+        self.status_label = ttk.Label(action_frame, text="Ready", font=('Segoe UI', 9))
         self.status_label.grid(row=1, column=0, columnspan=2, sticky=tk.W)
 
         # Buttons
