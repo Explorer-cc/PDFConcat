@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
+from tkinterdnd2 import DND_FILES, TkinterDnD
 import threading
 import sys
 from pathlib import Path
@@ -11,10 +12,10 @@ sys.path.insert(0, str(Path(__file__).parent))
 from concat_pdf import process_pdf
 
 
-class PDFThumbnailApp:
+class PDFConcatApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("PDF Thumbnail Grid Tool v0.9.9")
+        self.root.title("PDFConcat")
         self.root.geometry("700x600")
         self.root.resizable(False, False)
 
@@ -44,7 +45,7 @@ class PDFThumbnailApp:
         main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
 
         # Title
-        title_label = ttk.Label(main_frame, text="PDF Thumbnail Grid Tool",
+        title_label = ttk.Label(main_frame, text="PDFConcat",
                                 font=('Arial', 16, 'bold'))
         title_label.grid(row=0, column=0, columnspan=3, pady=(0, 20))
 
@@ -56,6 +57,8 @@ class PDFThumbnailApp:
         ttk.Label(file_frame, text="Input PDF File:").grid(row=0, column=0, sticky=tk.W)
         self.input_entry = ttk.Entry(file_frame, textvariable=self.input_path, width=50)
         self.input_entry.grid(row=1, column=0, padx=(0, 10), sticky=(tk.W, tk.E))
+        self.input_entry.drop_target_register(DND_FILES)
+        self.input_entry.dnd_bind('<<Drop>>', self.on_drop)
 
         self.input_btn = ttk.Button(file_frame, text="Browse...", command=self.select_input_file)
         self.input_btn.grid(row=1, column=1, padx=(0, 10))
@@ -294,7 +297,7 @@ class PDFThumbnailApp:
 
         if success:
             self.open_btn.config(state='normal')
-            messagebox.showinfo("Success", "PDF thumbnail grid completed!")
+            messagebox.showinfo("Success", "PDF processing completed!")
         else:
             messagebox.showerror("Error", error_msg)
             self.status_label.config(text="Processing failed")
@@ -327,7 +330,7 @@ class PDFThumbnailApp:
 
 
 def main():
-    root = tk.Tk()
+    root = TkinterDnD.Tk()
 
     # Set up style
     style = ttk.Style(root)
@@ -343,9 +346,8 @@ def main():
                 style.theme_use('default')
 
     # Create app
-    app = PDFThumbnailApp(root)
+    app = PDFConcatApp(root)
 
-    # Set up drag and drop (requires additional implementation)
     root.mainloop()
 
 
