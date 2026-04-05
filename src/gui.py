@@ -19,14 +19,40 @@ if sys.platform == 'win32':
 sys.path.insert(0, str(Path(__file__).parent))
 from concat_pdf import process_pdf
 
+# ─── Color Palette ───────────────────────────────────────────────
+COLORS = {
+    'bg':           '#F8F9FA',
+    'surface':      '#FFFFFF',
+    'border':       '#E8E8E8',
+    'title_bg':     '#FFFFFF',
+    'title_border': '#E8E8E8',
+    'accent':       '#4A90D9',
+    'accent_hover': '#357ABD',
+    'text':         '#2D3436',
+    'text_sec':     '#95A5A6',
+    'danger':       '#E74C3C',
+    'hover':        '#F0F0F0',
+    'entry_bg':     '#FFFFFF',
+    'progress_trough': '#E8E8E8',
+}
+
 
 class PDFConcatApp:
     def __init__(self, root):
         self.root = root
         self.root.title("PDFConcat")
-        self.root.geometry("700x750")
-        self.root.resizable(True, True)
-        self.root.minsize(700, 700)
+        self.root.geometry("700x900")
+        self.root.minsize(700, 900)
+        self.root.configure(bg=COLORS['bg'])
+
+        # Remove system title bar
+        self.root.overrideredirect(True)
+
+        # Track window state
+        self._drag_x = 0
+        self._drag_y = 0
+        self._maximized = False
+        self._restore_geometry = None
 
         # Variables
         self.input_path = tk.StringVar()
@@ -39,145 +65,354 @@ class PDFConcatApp:
 
         self.processing = False
 
+        self.create_title_bar()
         self.create_widgets()
 
+    # ─── Custom Title Bar ────────────────────────────────────────
+    def create_title_bar(self):
+        title_bar = tk.Frame(self.root, bg=COLORS['title_bg'], height=40)
+        title_bar.grid(row=0, column=0, sticky='new')
+        title_bar.pack_propagate(False)
+
+        # Left side: icon + title
+        left_frame = tk.Frame(title_bar, bg=COLORS['title_bg'])
+        left_frame.pack(side='left', padx=(10, 0))
+
+        # App icon
+        icon_path = Path(__file__).parent.parent / "icons" / "pdf-red.ico"
+        self._title_icon = None
+        if icon_path.exists():
+            try:
+                from PIL import Image, ImageTk
+                img = Image.open(icon_path)
+                img = img.resize((20, 20))
+                self._title_icon = ImageTk.PhotoImage(img)
+                icon_label = tk.Label(left_frame, image=self._title_icon,
+                                      bg=COLORS['title_bg'])
+                icon_label.pack(side='left', padx=(0, 6))
+            except Exception:
+                pass
+
+        # App title text
+        self._title_text_widget = tk.Label(left_frame, text="PDFConcat",
+                              font=('Segoe UI', 11, 'bold'),
+                              bg=COLORS['title_bg'], fg=COLORS['text'])
+        self._title_text_widget.pack(side='left')
+
+        # Right side: window control buttons
+        btn_frame = tk.Frame(title_bar, bg=COLORS['title_bg'])
+        btn_frame.pack(side='right')
+
+        BTN_W, BTN_H = 46, 40
+
+        btn_defs = [
+            (self._draw_close,    self.on_close,    True),
+            (self._draw_maximize, self.on_maximize, False),
+            (self._draw_minimize, self.on_minimize, False),
+        ]
+
+        for draw_fn, cmd, is_close in btn_defs:
+            canvas = tk.Canvas(btn_frame, width=BTN_W, height=BTN_H,
+                               bg=COLORS['title_bg'], highlightthickness=0,
+                               cursor='hand2')
+            canvas.pack(side='right')
+            draw_fn(canvas, COLORS['text'])
+            canvas._draw_fn = draw_fn
+            canvas._is_close = is_close
+            canvas.bind('<ButtonPress-1>', lambda e, c=cmd: c())
+            canvas.bind('<Enter>', self._on_canvas_btn_enter)
+            canvas.bind('<Leave>', self._on_canvas_btn_leave)
+
+        # Drag bindings
+        for widget in (title_bar, self._title_text_widget):
+            widget.bind('<ButtonPress-1>', self.on_title_press)
+            widget.bind('<B1-Motion>', self.on_title_drag)
+            widget.bind('<Double-Button-1>', lambda e: self.on_maximize())
+
+        # Bottom border line
+        border_line = tk.Frame(self.root, bg=COLORS['title_border'], height=1)
+        border_line.grid(row=1, column=0, sticky='new')
+
+    # ─── Title Bar Button Drawing ─────────────────────────────
+    @staticmethod
+    def _draw_minimize(canvas, color):
+        """Draw ─ centered at (23, 20)"""
+        canvas.delete('icon')
+        canvas.create_line(16, 20, 30, 20, fill=color, width=2.0, tags='icon')
+
+    @staticmethod
+    def _draw_maximize(canvas, color):
+        """Draw □ centered at (23, 20)"""
+        canvas.delete('icon')
+        canvas.create_rectangle(18, 15, 28, 25, outline=color, width=1.5, tags='icon')
+
+    @staticmethod
+    def _draw_close(canvas, color):
+        """Draw ✕ centered at (23, 20)"""
+        canvas.delete('icon')
+        canvas.create_line(18, 15, 28, 25, fill=color, width=1.5, tags='icon')
+        canvas.create_line(28, 15, 18, 25, fill=color, width=1.5, tags='icon')
+
+    def _on_canvas_btn_enter(self, event):
+        canvas = event.widget
+        if canvas._is_close:
+            canvas.configure(bg=COLORS['danger'])
+            canvas._draw_fn(canvas, '#FFFFFF')
+        else:
+            canvas.configure(bg=COLORS['hover'])
+            canvas._draw_fn(canvas, COLORS['text'])
+
+    def _on_canvas_btn_leave(self, event):
+        canvas = event.widget
+        canvas.configure(bg=COLORS['title_bg'])
+        canvas._draw_fn(canvas, COLORS['text'])
+
+    def on_title_press(self, event):
+        if self._maximized:
+            return
+        self._drag_x = event.x
+        self._drag_y = event.y
+
+    def on_title_drag(self, event):
+        if self._maximized:
+            return
+        x = self.root.winfo_x() + event.x - self._drag_x
+        y = self.root.winfo_y() + event.y - self._drag_y
+        self.root.geometry(f"+{x}+{y}")
+
+    def on_minimize(self):
+        self.root.iconify()
+
+    def on_maximize(self):
+        if self._maximized:
+            # Restore
+            if self._restore_geometry:
+                self.root.geometry(self._restore_geometry)
+            self._maximized = False
+        else:
+            # Save current geometry and maximize
+            self._restore_geometry = self.root.geometry()
+            screen_w = self.root.winfo_screenwidth()
+            screen_h = self.root.winfo_screenheight()
+            self.root.geometry(f"{screen_w}x{screen_h}+0+0")
+            self._maximized = True
+
+    def on_close(self):
+        self.root.destroy()
+
+    # ─── Main Content ────────────────────────────────────────────
     def create_widgets(self):
         # Main frame
-        main_frame = ttk.Frame(self.root, padding="10")
-        main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        main_frame = tk.Frame(self.root, bg=COLORS['bg'], padx=15, pady=10)
+        main_frame.grid(row=2, column=0, sticky='nsew')
         self.root.columnconfigure(0, weight=1)
-        self.root.rowconfigure(0, weight=1)
+        self.root.rowconfigure(2, weight=1)
         main_frame.columnconfigure(0, weight=1)
 
         # Title
-        title_label = ttk.Label(main_frame, text="PDFConcat",
-                                font=('Segoe UI', 16, 'bold'))
-        title_label.grid(row=0, column=0, columnspan=3, pady=(0, 20))
+        title_label = tk.Label(main_frame, text="PDFConcat",
+                               font=('Segoe UI', 20, 'bold'),
+                               bg=COLORS['bg'], fg=COLORS['accent'])
+        title_label.grid(row=0, column=0, columnspan=3, pady=(0, 15))
 
         # File selection area
-        file_frame = ttk.LabelFrame(main_frame, text="File Selection", padding="10")
-        file_frame.grid(row=1, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 10))
+        file_frame = tk.LabelFrame(main_frame, text="  File Selection  ",
+                                   bg=COLORS['surface'], fg=COLORS['text'],
+                                   font=('Segoe UI', 10, 'bold'),
+                                   bd=1, relief='solid',
+                                   highlightbackground=COLORS['border'],
+                                   padx=12, pady=10)
+        file_frame.grid(row=1, column=0, columnspan=3, sticky='ew', pady=(0, 10))
         file_frame.columnconfigure(0, weight=1)
 
         # Input file
-        ttk.Label(file_frame, text="Input PDF File:").grid(row=0, column=0, sticky=tk.W)
+        tk.Label(file_frame, text="Input PDF File:",
+                 bg=COLORS['surface'], fg=COLORS['text'],
+                 font=('Segoe UI', 9)).grid(row=0, column=0, sticky='w')
         self.input_entry = ttk.Entry(file_frame, textvariable=self.input_path, width=50)
-        self.input_entry.grid(row=1, column=0, padx=(0, 10), sticky=(tk.W, tk.E))
+        self.input_entry.grid(row=1, column=0, padx=(0, 10), sticky='ew')
         self.input_entry.drop_target_register(DND_FILES)
         self.input_entry.dnd_bind('<<Drop>>', self.on_drop)
 
-        self.input_btn = ttk.Button(file_frame, text="Browse...", command=self.select_input_file)
+        self.input_btn = tk.Button(file_frame, text="Browse...",
+                                   command=self.select_input_file,
+                                   bg=COLORS['surface'], fg=COLORS['text'],
+                                   font=('Segoe UI', 9),
+                                   relief='solid', bd=1,
+                                   activebackground=COLORS['hover'],
+                                   activeforeground=COLORS['text'],
+                                   cursor='hand2', padx=12, pady=3)
         self.input_btn.grid(row=1, column=1, padx=(0, 10))
 
         # Output file
-        ttk.Label(file_frame, text="Output PDF File:").grid(row=2, column=0, sticky=tk.W, pady=(10, 0))
+        tk.Label(file_frame, text="Output PDF File:",
+                 bg=COLORS['surface'], fg=COLORS['text'],
+                 font=('Segoe UI', 9)).grid(row=2, column=0, sticky='w', pady=(10, 0))
         self.output_entry = ttk.Entry(file_frame, textvariable=self.output_path, width=50)
-        self.output_entry.grid(row=3, column=0, padx=(0, 10), sticky=(tk.W, tk.E), pady=(10, 0))
+        self.output_entry.grid(row=3, column=0, padx=(0, 10), sticky='ew', pady=(10, 0))
 
-        self.output_btn = ttk.Button(file_frame, text="Browse...", command=self.select_output_file)
+        self.output_btn = tk.Button(file_frame, text="Browse...",
+                                    command=self.select_output_file,
+                                    bg=COLORS['surface'], fg=COLORS['text'],
+                                    font=('Segoe UI', 9),
+                                    relief='solid', bd=1,
+                                    activebackground=COLORS['hover'],
+                                    activeforeground=COLORS['text'],
+                                    cursor='hand2', padx=12, pady=3)
         self.output_btn.grid(row=3, column=1, padx=(0, 10), pady=(10, 0))
 
-        # File drag and drop tip
-        drag_label = ttk.Label(file_frame, text="Tip: You can drag and drop PDF files to the input box",
-                               font=('Segoe UI', 9), foreground='gray')
-        drag_label.grid(row=4, column=0, columnspan=2, pady=(5, 0))
+        # Drag tip
+        tk.Label(file_frame, text="Tip: You can drag and drop PDF files to the input box",
+                 font=('Segoe UI', 8), bg=COLORS['surface'],
+                 fg=COLORS['text_sec']).grid(row=4, column=0, columnspan=2, pady=(5, 0))
 
         # Parameter configuration area
-        param_frame = ttk.LabelFrame(main_frame, text="Parameters", padding="10")
-        param_frame.grid(row=2, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 10))
+        param_frame = tk.LabelFrame(main_frame, text="  Parameters  ",
+                                    bg=COLORS['surface'], fg=COLORS['text'],
+                                    font=('Segoe UI', 10, 'bold'),
+                                    bd=1, relief='solid',
+                                    padx=12, pady=10)
+        param_frame.grid(row=2, column=0, columnspan=3, sticky='ew', pady=(0, 10))
 
         # Grid layout
-        grid_frame = ttk.Frame(param_frame)
-        grid_frame.grid(row=0, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 10))
+        grid_frame = tk.Frame(param_frame, bg=COLORS['surface'])
+        grid_frame.grid(row=0, column=0, columnspan=3, sticky='ew', pady=(0, 10))
         grid_frame.columnconfigure(0, weight=1)
 
-        ttk.Label(grid_frame, text="Grid Layout:").grid(row=0, column=0, sticky=tk.W)
-        ttk.Label(grid_frame, text="Columns:").grid(row=0, column=1, padx=(20, 5), sticky=tk.E)
-        columns_spin = ttk.Spinbox(grid_frame, from_=1, to=10, width=5, textvariable=self.columns)
+        tk.Label(grid_frame, text="Grid Layout:",
+                 bg=COLORS['surface'], fg=COLORS['text'],
+                 font=('Segoe UI', 9)).grid(row=0, column=0, sticky='w')
+        tk.Label(grid_frame, text="Columns:",
+                 bg=COLORS['surface'], fg=COLORS['text'],
+                 font=('Segoe UI', 9)).grid(row=0, column=1, padx=(20, 5), sticky='e')
+        columns_spin = ttk.Spinbox(grid_frame, from_=1, to=10, width=5,
+                                   textvariable=self.columns)
         columns_spin.grid(row=0, column=2, padx=(0, 20))
 
-        ttk.Label(grid_frame, text="Rows:").grid(row=0, column=3, padx=(0, 5), sticky=tk.E)
-        rows_spin = ttk.Spinbox(grid_frame, from_=1, to=10, width=5, textvariable=self.rows)
+        tk.Label(grid_frame, text="Rows:",
+                 bg=COLORS['surface'], fg=COLORS['text'],
+                 font=('Segoe UI', 9)).grid(row=0, column=3, padx=(0, 5), sticky='e')
+        rows_spin = ttk.Spinbox(grid_frame, from_=1, to=10, width=5,
+                                textvariable=self.rows)
         rows_spin.grid(row=0, column=4, padx=(0, 10))
 
-        auto_calc_btn = ttk.Button(grid_frame, text="Auto Calculate Rows",
-                                   command=self.auto_calculate_rows)
+        auto_calc_btn = tk.Button(grid_frame, text="Auto Calculate Rows",
+                                  command=self.auto_calculate_rows,
+                                  bg=COLORS['surface'], fg=COLORS['text'],
+                                  font=('Segoe UI', 9),
+                                  relief='solid', bd=1,
+                                  activebackground=COLORS['hover'],
+                                  activeforeground=COLORS['text'],
+                                  cursor='hand2', padx=8, pady=2)
         auto_calc_btn.grid(row=0, column=5)
 
-        # Page size is automatically calculated to fit the content
-
         # Quality settings
-        quality_frame = ttk.Frame(param_frame)
-        quality_frame.grid(row=2, column=0, columnspan=3, sticky=(tk.W, tk.E))
+        quality_frame = tk.Frame(param_frame, bg=COLORS['surface'])
+        quality_frame.grid(row=2, column=0, columnspan=3, sticky='ew')
         quality_frame.columnconfigure(0, weight=1)
 
-        ttk.Label(quality_frame, text="Quality Settings:").grid(row=0, column=0, sticky=tk.W)
-        ttk.Label(quality_frame, text="DPI:").grid(row=0, column=1, padx=(20, 5), sticky=tk.E)
+        tk.Label(quality_frame, text="Quality Settings:",
+                 bg=COLORS['surface'], fg=COLORS['text'],
+                 font=('Segoe UI', 9)).grid(row=0, column=0, sticky='w')
+        tk.Label(quality_frame, text="DPI:",
+                 bg=COLORS['surface'], fg=COLORS['text'],
+                 font=('Segoe UI', 9)).grid(row=0, column=1, padx=(20, 5), sticky='e')
         dpi_spin = ttk.Spinbox(quality_frame, from_=50, to=600, width=6,
                                textvariable=self.dpi, increment=50)
         dpi_spin.grid(row=0, column=2, padx=(0, 20))
 
-        ttk.Label(quality_frame, text="Spacing:").grid(row=0, column=3, padx=(0, 5), sticky=tk.E)
+        tk.Label(quality_frame, text="Spacing:",
+                 bg=COLORS['surface'], fg=COLORS['text'],
+                 font=('Segoe UI', 9)).grid(row=0, column=3, padx=(0, 5), sticky='e')
         gap_spin = ttk.Spinbox(quality_frame, from_=0, to=20, width=5,
-                              textvariable=self.gap, increment=0.5)
+                               textvariable=self.gap, increment=0.5)
         gap_spin.grid(row=0, column=4, padx=(0, 20))
 
-        ttk.Label(quality_frame, text="Margin:").grid(row=0, column=5, padx=(0, 5), sticky=tk.E)
+        tk.Label(quality_frame, text="Margin:",
+                 bg=COLORS['surface'], fg=COLORS['text'],
+                 font=('Segoe UI', 9)).grid(row=0, column=5, padx=(0, 5), sticky='e')
         padding_spin = ttk.Spinbox(quality_frame, from_=0, to=50, width=5,
-                                  textvariable=self.padding, increment=1)
+                                   textvariable=self.padding, increment=1)
         padding_spin.grid(row=0, column=6)
 
         # Action area
-        action_frame = ttk.LabelFrame(main_frame, text="Actions", padding="10")
-        action_frame.grid(row=3, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 10))
+        action_frame = tk.LabelFrame(main_frame, text="  Actions  ",
+                                     bg=COLORS['surface'], fg=COLORS['text'],
+                                     font=('Segoe UI', 10, 'bold'),
+                                     bd=1, relief='solid',
+                                     padx=12, pady=10)
+        action_frame.grid(row=3, column=0, columnspan=3, sticky='ew', pady=(0, 10))
         action_frame.columnconfigure(0, weight=1)
-        action_frame.columnconfigure(1, weight=1)
 
         # Progress bar
         self.progress_var = tk.DoubleVar()
         self.progress_bar = ttk.Progressbar(action_frame, variable=self.progress_var,
-                                           maximum=100, length=650)
-        self.progress_bar.grid(row=0, column=0, columnspan=2, pady=(0, 10), sticky=(tk.W, tk.E))
+                                            maximum=100, mode='determinate')
+        self.progress_bar.grid(row=0, column=0, columnspan=2, pady=(0, 10), sticky='ew')
 
         # Status label
-        self.status_label = ttk.Label(action_frame, text="Ready", font=('Segoe UI', 9))
-        self.status_label.grid(row=1, column=0, columnspan=2, sticky=tk.W)
+        self.status_label = tk.Label(action_frame, text="Ready",
+                                     font=('Segoe UI', 9),
+                                     bg=COLORS['surface'], fg=COLORS['text_sec'])
+        self.status_label.grid(row=1, column=0, columnspan=2, sticky='w')
 
         # Buttons
-        button_frame = ttk.Frame(action_frame)
+        button_frame = tk.Frame(action_frame, bg=COLORS['surface'])
         button_frame.grid(row=2, column=0, columnspan=2, pady=(10, 0))
 
-        self.process_btn = ttk.Button(button_frame, text="Start Processing",
-                                      command=self.start_processing,
-                                      style='Accent.TButton')
+        self.process_btn = tk.Button(button_frame, text="  Start Processing  ",
+                                     command=self.start_processing,
+                                     bg=COLORS['accent'], fg='#FFFFFF',
+                                     font=('Segoe UI', 10, 'bold'),
+                                     relief='flat', bd=0,
+                                     activebackground=COLORS['accent_hover'],
+                                     activeforeground='#FFFFFF',
+                                     cursor='hand2', padx=20, pady=6)
         self.process_btn.grid(row=0, column=0, padx=(0, 10))
 
-        self.open_btn = ttk.Button(button_frame, text="Open Output File",
-                                  command=self.open_output_file, state='disabled')
+        self.open_btn = tk.Button(button_frame, text="Open Output File",
+                                  command=self.open_output_file, state='disabled',
+                                  bg=COLORS['surface'], fg=COLORS['text'],
+                                  font=('Segoe UI', 10, 'bold'),
+                                  relief='solid', bd=1,
+                                  activebackground=COLORS['hover'],
+                                  activeforeground=COLORS['text'],
+                                  cursor='hand2', padx=20, pady=6)
         self.open_btn.grid(row=0, column=1, padx=(0, 10))
 
         # Preset configurations
-        preset_frame = ttk.LabelFrame(main_frame, text="Quick Presets", padding="5")
-        preset_frame.grid(row=4, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 0))
-
-        btn_container = ttk.Frame(preset_frame)
-        btn_container.grid(row=0, column=0)
-
-        ttk.Button(btn_container, text="3×2 Grid",
-                  command=lambda: self.apply_preset(3, 2)).grid(row=0, column=0, padx=(0, 5))
-        ttk.Button(btn_container, text="4×3 Grid",
-                  command=lambda: self.apply_preset(4, 3)).grid(row=0, column=1, padx=5)
-        ttk.Button(btn_container, text="5×3 Grid",
-                  command=lambda: self.apply_preset(5, 3)).grid(row=0, column=2, padx=5)
-        ttk.Button(btn_container, text="Single Row",
-                  command=self.apply_single_row).grid(row=1, column=0, padx=(0, 5), pady=(5, 0))
-        ttk.Button(btn_container, text="Single Column",
-                  command=self.apply_single_column).grid(row=1, column=1, padx=5, pady=(5, 0))
-        ttk.Button(btn_container, text="Auto Layout",
-                  command=lambda: self.apply_preset(4, None)).grid(row=1, column=2, padx=5, pady=(5, 0))
-
+        preset_frame = tk.LabelFrame(main_frame, text="  Quick Presets  ",
+                                     bg=COLORS['surface'], fg=COLORS['text'],
+                                     font=('Segoe UI', 10, 'bold'),
+                                     bd=1, relief='solid',
+                                     padx=12, pady=8)
+        preset_frame.grid(row=4, column=0, columnspan=3, sticky='ew')
         preset_frame.columnconfigure(0, weight=1)
 
+        btn_container = tk.Frame(preset_frame, bg=COLORS['surface'])
+        btn_container.grid(row=0, column=0)
+
+        presets = [
+            ("3×2 Grid",       lambda: self.apply_preset(3, 2),   0, 0),
+            ("4×3 Grid",       lambda: self.apply_preset(4, 3),   0, 1),
+            ("5×3 Grid",       lambda: self.apply_preset(5, 3),   0, 2),
+            ("Single Row",     self.apply_single_row,             1, 0),
+            ("Single Column",  self.apply_single_column,          1, 1),
+            ("Auto Layout",    lambda: self.apply_preset(4, None),1, 2),
+        ]
+
+        for text, cmd, r, c in presets:
+            pady = (5, 0) if r == 1 else (0, 0)
+            btn = tk.Button(btn_container, text=text, command=cmd,
+                            bg=COLORS['surface'], fg=COLORS['text'],
+                            font=('Segoe UI', 9),
+                            relief='solid', bd=1,
+                            activebackground=COLORS['hover'],
+                            activeforeground=COLORS['text'],
+                            cursor='hand2', padx=10, pady=3, width=14)
+            btn.grid(row=r, column=c, padx=(0 if c == 0 else 5, 0), pady=pady)
+
+    # ─── Business Logic (unchanged) ──────────────────────────────
     def select_input_file(self):
         filename = filedialog.askopenfilename(
             title="Select PDF File",
@@ -185,7 +420,6 @@ class PDFConcatApp:
         )
         if filename:
             self.input_path.set(filename)
-            # Auto generate output filename
             input_path = Path(filename)
             output_path = input_path.parent / f"{input_path.stem}_thumbnails.pdf"
             self.output_path.set(str(output_path))
@@ -317,22 +551,19 @@ class PDFConcatApp:
             self.update_progress(10, "Reading PDF file...")
 
             # Call core processing function
-            # Page size is automatically calculated to fit the content
             process_pdf(
                 input_path=Path(self.input_path.get()),
                 output_path=Path(self.output_path.get()),
                 n=self.columns.get(),
                 m=self.rows.get(),
-                page_size=None,  # Auto-calculate page size to fit content
-                orientation="landscape",  # Not used when page_size is None
+                page_size=None,
+                orientation="landscape",
                 dpi=self.dpi.get(),
                 gap=self.gap.get(),
                 padding=self.padding.get()
             )
 
             self.update_progress(100, "Processing complete!")
-
-            # Show completion message
             self.root.after(0, lambda: self.on_processing_complete(True))
 
         except Exception as e:
@@ -362,7 +593,6 @@ class PDFConcatApp:
         """Open output file"""
         output_file = self.output_path.get()
         if output_file and Path(output_file).exists():
-            # Open with system default program
             if sys.platform == 'win32':
                 import os
                 os.startfile(output_file)
@@ -373,11 +603,9 @@ class PDFConcatApp:
         """Handle file drag and drop"""
         files = self.root.tk.splitlist(event.data)
         if files:
-            # Take only the first file
             file_path = files[0]
             if file_path.lower().endswith('.pdf'):
                 self.input_path.set(file_path)
-                # Auto generate output filename
                 input_path = Path(file_path)
                 output_path = input_path.parent / f"{input_path.stem}_thumbnails.pdf"
                 self.output_path.set(str(output_path))
@@ -385,32 +613,62 @@ class PDFConcatApp:
                 messagebox.showwarning("Warning", "Please drag and drop PDF files")
 
 
+def configure_styles(root):
+    """Configure ttk widget styles for modern light theme"""
+    style = ttk.Style(root)
+    style.theme_use('clam')
+
+    # General
+    style.configure('.', background=COLORS['bg'], foreground=COLORS['text'])
+
+    # Frames
+    style.configure('TFrame', background=COLORS['bg'])
+    style.configure('TLabel', background=COLORS['bg'], foreground=COLORS['text'],
+                    font=('Segoe UI', 9))
+
+    # Entry
+    style.configure('TEntry',
+                    fieldbackground=COLORS['entry_bg'],
+                    bordercolor=COLORS['border'],
+                    lightcolor=COLORS['border'],
+                    darkcolor=COLORS['border'],
+                    insertcolor=COLORS['text'])
+    style.map('TEntry',
+              bordercolor=[('focus', COLORS['accent'])],
+              lightcolor=[('focus', COLORS['accent'])],
+              darkcolor=[('focus', COLORS['accent'])])
+
+    # Spinbox
+    style.configure('TSpinbox',
+                    fieldbackground=COLORS['entry_bg'],
+                    bordercolor=COLORS['border'],
+                    lightcolor=COLORS['border'],
+                    darkcolor=COLORS['border'],
+                    arrowcolor=COLORS['text'],
+                    insertcolor=COLORS['text'])
+    style.map('TSpinbox',
+              bordercolor=[('focus', COLORS['accent'])],
+              lightcolor=[('focus', COLORS['accent'])],
+              darkcolor=[('focus', COLORS['accent'])])
+
+    # Progressbar
+    style.configure('Horizontal.TProgressbar',
+                    troughcolor=COLORS['progress_trough'],
+                    background='#81C784',
+                    bordercolor=COLORS['border'],
+                    lightcolor='#81C784',
+                    darkcolor='#81C784',
+                    thickness=20)
+
+
 def main():
     root = TkinterDnD.Tk()
 
-    # Set up style
-    style = ttk.Style(root)
-
-    # Select theme based on system
-    if sys.platform == 'win32':
-        try:
-            style.theme_use('vista')
-        except:
-            try:
-                style.theme_use('winnative')
-            except:
-                style.theme_use('default')
+    # Configure styles
+    configure_styles(root)
 
     # Create app
     app = PDFConcatApp(root)
-
-    # Set window icon after app creation
-    icon_path = Path(__file__).parent.parent / "icons" / "pdf-red.ico"
-    try:
-        if icon_path.exists():
-            root.iconbitmap(str(icon_path))
-    except Exception:
-        pass
 
     root.mainloop()
 
