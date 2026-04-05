@@ -28,9 +28,9 @@ uv run python build.py
 **Two-layer design:** core processing logic in `src/concat_pdf/` and GUI in `src/gui.py`.
 
 - `src/concat_pdf/__init__.py` — Core module. `process_pdf()` is the main entry point. Uses PyMuPDF (fitz) to render PDF pages into grid layouts. `calculate_grid_size()` computes grid dimensions. Auto-calculates page size when none specified.
-- `src/gui.py` — `PDFConcatApp` class. tkinter GUI with threading for non-blocking processing. Imports `process_pdf` from the core module.
+- `src/gui.py` — `PDFConcatApp` class. Custom undecorated window (`overrideredirect(True)`) with a hand-drawn title bar (Canvas buttons for min/max/close). Color palette centralized in the `COLORS` dict at module top. Uses `tkinterdnd2` for drag-and-drop and threading for non-blocking PDF processing.
 - `concat_pdf.py` / `run_gui.py` — Convenience launchers that add `src/` to `sys.path` and delegate to the core module's `main()` or the GUI respectively.
-- `build.py` — PyInstaller build script. Creates a single-file Windows executable and a portable distribution folder.
+- `build.py` — PyInstaller build script. Creates a single-file Windows executable to `dist/PDFConcat.exe`. Requires `pyinstaller` installed as a dev dependency (`uv add pyinstaller --dev`). Uses blue icon (`icons/pdf-blue.ico`) for the exe.
 
 ## Key Dependencies
 
@@ -43,9 +43,13 @@ uv run python build.py
 ## Important Rules
 
 - **务必使用 `uv run` 执行所有 Python 运行任务**，不要直接用 `python` 命令。包括运行 GUI、CLI、测试等一切需要执行 Python 的场景。
+- **构建前需先安装 PyInstaller**: `uv add pyinstaller --dev`（`build.py` 不会自动安装依赖）。
 
 ## Important Details
 
 - Page sizes in the codebase are in **points** (72 points = 1 inch). Standard sizes: A4=(595.276, 841.890), Letter=(612, 792).
 - The GUI uses `sys.path.insert` to resolve imports from `src/` rather than an installed package. The `build.py` script uses `--add-data "src;src"` for PyInstaller to include the source.
+- GUI color theme is defined in the `COLORS` dict at the top of `src/gui.py`. Modify colors there, not inline.
+- The GUI window is undecorated (`overrideredirect(True)`) with a custom title bar drawn via `create_title_bar()`. The title bar uses Canvas widgets for pixel-precise min/max/close buttons.
+- Window icon (title bar): `icons/pdf-red.ico`. Exe icon (build): `icons/pdf-blue.ico`.
 - There are no tests, linter config, or CI setup currently.
