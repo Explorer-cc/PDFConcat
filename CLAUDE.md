@@ -20,7 +20,7 @@ uv run python concat_pdf.py input.pdf output.pdf -n 3 -m 2
 uv run python concat_pdf.py input.pdf output.pdf -n 4 --page-size A4 --orientation landscape
 
 # Build Windows executable (PyInstaller, outputs to dist/)
-python build.py
+uv run python build.py
 ```
 
 ## Architecture
@@ -39,6 +39,10 @@ python build.py
 - **NumPy** — Numerical operations
 - **tkinter** — GUI (stdlib)
 - Python >=3.12 required
+
+## Important Rules
+
+- **务必使用 `uv run` 执行所有 Python 运行任务**，不要直接用 `python` 命令。包括运行 GUI、CLI、测试等一切需要执行 Python 的场景。
 
 ## Important Details
 

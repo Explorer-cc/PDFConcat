@@ -27,6 +27,11 @@ gui = [
     { name = "pyinstaller" },
 ]
 
+[package.dev-dependencies]
+dev = [
+    { name = "pyinstaller" },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "numpy", specifier = ">=1.24.0" },
@@ -36,6 +41,9 @@ requires-dist = [
     { name = "tkinterdnd2", specifier = ">=0.4.3" },
 ]
 provides-extras = ["gui"]
+
+[package.metadata.requires-dev]
+dev = [{ name = "pyinstaller", specifier = ">=6.17.0" }]
 
 [[package]]
 name = "macholib"

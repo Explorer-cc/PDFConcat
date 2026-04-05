@@ -24,15 +24,9 @@ class PDFConcatApp:
     def __init__(self, root):
         self.root = root
         self.root.title("PDFConcat")
-        self.root.geometry("700x600")
-        self.root.resizable(False, False)
-
-        # Set application icon (if available)
-        try:
-            # self.root.iconbitmap('icon.ico')
-            pass
-        except:
-            pass
+        self.root.geometry("700x750")
+        self.root.resizable(True, True)
+        self.root.minsize(700, 700)
 
         # Variables
         self.input_path = tk.StringVar()
@@ -54,11 +48,6 @@ class PDFConcatApp:
         self.root.columnconfigure(0, weight=1)
         self.root.rowconfigure(0, weight=1)
         main_frame.columnconfigure(0, weight=1)
-
-        # Title
-        title_label = ttk.Label(main_frame, text="PDFConcat",
-                                font=('Segoe UI', 16, 'bold'))
-        title_label.grid(row=0, column=0, columnspan=3, pady=(0, 20))
 
         # File selection area
         file_frame = ttk.LabelFrame(main_frame, text="File Selection", padding="10")
@@ -163,18 +152,26 @@ class PDFConcatApp:
         self.open_btn.grid(row=0, column=1, padx=(0, 10))
 
         # Preset configurations
-        preset_frame = ttk.Frame(main_frame)
-        preset_frame.grid(row=4, column=0, columnspan=3, pady=(10, 0), sticky='')
+        preset_frame = ttk.LabelFrame(main_frame, text="Quick Presets", padding="5")
+        preset_frame.grid(row=4, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 0))
 
-        ttk.Label(preset_frame, text="Quick Presets:").grid(row=0, column=0, sticky=tk.W)
-        ttk.Button(preset_frame, text="3×2 Grid",
-                  command=lambda: self.apply_preset(3, 2)).grid(row=0, column=1, padx=(10, 5))
-        ttk.Button(preset_frame, text="4×3 Grid",
-                  command=lambda: self.apply_preset(4, 3)).grid(row=0, column=2, padx=(5, 5))
-        ttk.Button(preset_frame, text="5×3 Grid",
-                  command=lambda: self.apply_preset(5, 3)).grid(row=0, column=3, padx=(5, 5))
-        ttk.Button(preset_frame, text="Auto Layout",
-                  command=lambda: self.apply_preset(4, None)).grid(row=0, column=4, padx=(5, 0))
+        btn_container = ttk.Frame(preset_frame)
+        btn_container.grid(row=0, column=0)
+
+        ttk.Button(btn_container, text="3×2 Grid",
+                  command=lambda: self.apply_preset(3, 2)).grid(row=0, column=0, padx=(0, 5))
+        ttk.Button(btn_container, text="4×3 Grid",
+                  command=lambda: self.apply_preset(4, 3)).grid(row=0, column=1, padx=5)
+        ttk.Button(btn_container, text="5×3 Grid",
+                  command=lambda: self.apply_preset(5, 3)).grid(row=0, column=2, padx=5)
+        ttk.Button(btn_container, text="Single Row",
+                  command=self.apply_single_row).grid(row=1, column=0, padx=(0, 5), pady=(5, 0))
+        ttk.Button(btn_container, text="Single Column",
+                  command=self.apply_single_column).grid(row=1, column=1, padx=5, pady=(5, 0))
+        ttk.Button(btn_container, text="Auto Layout",
+                  command=lambda: self.apply_preset(4, None)).grid(row=1, column=2, padx=5, pady=(5, 0))
+
+        preset_frame.columnconfigure(0, weight=1)
 
     def select_input_file(self):
         filename = filedialog.askopenfilename(
@@ -227,6 +224,38 @@ class PDFConcatApp:
         if rows is not None:
             self.rows.set(rows)
 
+    def _get_page_count(self):
+        """Get page count of the input PDF file"""
+        input_file = self.input_path.get()
+        if not input_file:
+            messagebox.showwarning("Warning", "Please select an input PDF file first")
+            return None
+        try:
+            import fitz
+            doc = fitz.open(input_file)
+            total_pages = len(doc)
+            doc.close()
+            return total_pages
+        except Exception as e:
+            messagebox.showerror("Error", f"Cannot read PDF file: {str(e)}")
+            return None
+
+    def apply_single_row(self):
+        """Set all pages in one row"""
+        total_pages = self._get_page_count()
+        if total_pages is not None:
+            self.columns.set(total_pages)
+            self.rows.set(1)
+            self.status_label.config(text=f"Single Row: {total_pages} pages in 1 row")
+
+    def apply_single_column(self):
+        """Set all pages in one column"""
+        total_pages = self._get_page_count()
+        if total_pages is not None:
+            self.columns.set(1)
+            self.rows.set(total_pages)
+            self.status_label.config(text=f"Single Column: {total_pages} pages in 1 column")
+
     def validate_inputs(self):
         """Validate input parameters"""
         if not self.input_path.get():
@@ -236,6 +265,12 @@ class PDFConcatApp:
         if not self.output_path.get():
             messagebox.showwarning("Warning", "Please select an output PDF file")
             return False
+
+        output_file = Path(self.output_path.get())
+        if output_file.exists():
+            if not messagebox.askyesno("Confirm",
+                    f"File already exists:\n{output_file}\n\nOverwrite?"):
+                return False
 
         if self.columns.get() <= 0:
             messagebox.showwarning("Warning", "Columns must be greater than 0")
@@ -363,6 +398,14 @@ def main():
 
     # Create app
     app = PDFConcatApp(root)
+
+    # Set window icon after app creation
+    icon_path = Path(__file__).parent.parent / "icons" / "pdf-red.ico"
+    try:
+        if icon_path.exists():
+            root.iconbitmap(str(icon_path))
+    except Exception:
+        pass
 
     root.mainloop()
 
