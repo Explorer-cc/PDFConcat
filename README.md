@@ -1,5 +1,7 @@
 # PDFConcat
 
+**[English](README.md)** | **[中文](README-CN.md)**
+
 A lightweight Python tool that transforms PDF pages into organized thumbnail grids. Perfect for creating document previews, proofreading layouts, or compact document summaries.
 
 ## Features
