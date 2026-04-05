@@ -51,6 +51,9 @@ class PDFConcatApp:
         # Main frame
         main_frame = ttk.Frame(self.root, padding="10")
         main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        self.root.columnconfigure(0, weight=1)
+        self.root.rowconfigure(0, weight=1)
+        main_frame.columnconfigure(0, weight=1)
 
         # Title
         title_label = ttk.Label(main_frame, text="PDFConcat",
@@ -60,6 +63,7 @@ class PDFConcatApp:
         # File selection area
         file_frame = ttk.LabelFrame(main_frame, text="File Selection", padding="10")
         file_frame.grid(row=1, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 10))
+        file_frame.columnconfigure(0, weight=1)
 
         # Input file
         ttk.Label(file_frame, text="Input PDF File:").grid(row=0, column=0, sticky=tk.W)
@@ -91,13 +95,14 @@ class PDFConcatApp:
         # Grid layout
         grid_frame = ttk.Frame(param_frame)
         grid_frame.grid(row=0, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 10))
+        grid_frame.columnconfigure(0, weight=1)
 
         ttk.Label(grid_frame, text="Grid Layout:").grid(row=0, column=0, sticky=tk.W)
-        ttk.Label(grid_frame, text="Columns:").grid(row=0, column=1, padx=(20, 5))
+        ttk.Label(grid_frame, text="Columns:").grid(row=0, column=1, padx=(20, 5), sticky=tk.E)
         columns_spin = ttk.Spinbox(grid_frame, from_=1, to=10, width=5, textvariable=self.columns)
         columns_spin.grid(row=0, column=2, padx=(0, 20))
 
-        ttk.Label(grid_frame, text="Rows:").grid(row=0, column=3, padx=(0, 5))
+        ttk.Label(grid_frame, text="Rows:").grid(row=0, column=3, padx=(0, 5), sticky=tk.E)
         rows_spin = ttk.Spinbox(grid_frame, from_=1, to=10, width=5, textvariable=self.rows)
         rows_spin.grid(row=0, column=4, padx=(0, 10))
 
@@ -110,19 +115,20 @@ class PDFConcatApp:
         # Quality settings
         quality_frame = ttk.Frame(param_frame)
         quality_frame.grid(row=2, column=0, columnspan=3, sticky=(tk.W, tk.E))
+        quality_frame.columnconfigure(0, weight=1)
 
         ttk.Label(quality_frame, text="Quality Settings:").grid(row=0, column=0, sticky=tk.W)
-        ttk.Label(quality_frame, text="DPI:").grid(row=0, column=1, padx=(20, 5))
+        ttk.Label(quality_frame, text="DPI:").grid(row=0, column=1, padx=(20, 5), sticky=tk.E)
         dpi_spin = ttk.Spinbox(quality_frame, from_=50, to=600, width=6,
                                textvariable=self.dpi, increment=50)
         dpi_spin.grid(row=0, column=2, padx=(0, 20))
 
-        ttk.Label(quality_frame, text="Spacing:").grid(row=0, column=3, padx=(0, 5))
+        ttk.Label(quality_frame, text="Spacing:").grid(row=0, column=3, padx=(0, 5), sticky=tk.E)
         gap_spin = ttk.Spinbox(quality_frame, from_=0, to=20, width=5,
                               textvariable=self.gap, increment=0.5)
         gap_spin.grid(row=0, column=4, padx=(0, 20))
 
-        ttk.Label(quality_frame, text="Margin:").grid(row=0, column=5, padx=(0, 5))
+        ttk.Label(quality_frame, text="Margin:").grid(row=0, column=5, padx=(0, 5), sticky=tk.E)
         padding_spin = ttk.Spinbox(quality_frame, from_=0, to=50, width=5,
                                   textvariable=self.padding, increment=1)
         padding_spin.grid(row=0, column=6)
@@ -130,6 +136,8 @@ class PDFConcatApp:
         # Action area
         action_frame = ttk.LabelFrame(main_frame, text="Actions", padding="10")
         action_frame.grid(row=3, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 10))
+        action_frame.columnconfigure(0, weight=1)
+        action_frame.columnconfigure(1, weight=1)
 
         # Progress bar
         self.progress_var = tk.DoubleVar()
@@ -156,7 +164,7 @@ class PDFConcatApp:
 
         # Preset configurations
         preset_frame = ttk.Frame(main_frame)
-        preset_frame.grid(row=4, column=0, columnspan=3, pady=(10, 0))
+        preset_frame.grid(row=4, column=0, columnspan=3, pady=(10, 0), sticky='')
 
         ttk.Label(preset_frame, text="Quick Presets:").grid(row=0, column=0, sticky=tk.W)
         ttk.Button(preset_frame, text="3×2 Grid",
