@@ -49,6 +49,11 @@ class PDFConcatApp:
         self.root.rowconfigure(0, weight=1)
         main_frame.columnconfigure(0, weight=1)
 
+        # Title
+        title_label = ttk.Label(main_frame, text="PDFConcat",
+                                font=('Segoe UI', 16, 'bold'))
+        title_label.grid(row=0, column=0, columnspan=3, pady=(0, 20))
+
         # File selection area
         file_frame = ttk.LabelFrame(main_frame, text="File Selection", padding="10")
         file_frame.grid(row=1, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 10))
