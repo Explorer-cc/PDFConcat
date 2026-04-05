@@ -29,8 +29,8 @@ uv run python build.py
 
 - `src/concat_pdf/__init__.py` — Core module. `process_pdf()` is the main entry point. Uses PyMuPDF (fitz) to render PDF pages into grid layouts. `calculate_grid_size()` computes grid dimensions. Auto-calculates page size when none specified.
 - `src/gui.py` — `PDFConcatApp` class. Custom undecorated window (`overrideredirect(True)`) with a hand-drawn title bar (Canvas buttons for min/max/close). Color palette centralized in the `COLORS` dict at module top. Uses `tkinterdnd2` for drag-and-drop and threading for non-blocking PDF processing.
-- `concat_pdf.py` / `run_gui.py` — Convenience launchers that add `src/` to `sys.path` and delegate to the core module's `main()` or the GUI respectively.
-- `build.py` — PyInstaller build script. Creates a single-file Windows executable to `dist/PDFConcat.exe`. Requires `pyinstaller` installed as a dev dependency (`uv add pyinstaller --dev`). Uses blue icon (`icons/pdf-blue.ico`) for the exe.
+- `concat_pdf.py` — CLI launcher. Adds `src/` to `sys.path` and delegates to `concat_pdf.main()`.
+- `build.py` — PyInstaller build script. Creates a single-file Windows executable to `dist/PDFConcat.exe`. Requires `pyinstaller` installed as a dev dependency (`uv add pyinstaller --dev`). Uses blue icon (`icons/pdf-blue.ico`) for the exe. Cleans `build/`, `dist/`, and `.spec` files before each build.
 
 ## Key Dependencies
 
@@ -38,6 +38,7 @@ uv run python build.py
 - **Pillow** — Image handling
 - **NumPy** — Numerical operations
 - **tkinter** — GUI (stdlib)
+- **tkinterdnd2** — Drag-and-drop support for the GUI
 - Python >=3.12 required
 
 ## Important Rules
@@ -50,7 +51,9 @@ uv run python build.py
 
 - Page sizes in the codebase are in **points** (72 points = 1 inch). Standard sizes: A4=(595.276, 841.890), Letter=(612, 792).
 - The GUI uses `sys.path.insert` to resolve imports from `src/` rather than an installed package. The `build.py` script uses `--add-data "src;src"` for PyInstaller to include the source.
-- GUI color theme is defined in the `COLORS` dict at the top of `src/gui.py`. Modify colors there, not inline.
+- GUI color theme is defined in the `COLORS` dict at the top of `src/gui.py`. Modify colors there, not inline. ttk styles are configured in `configure_styles()` at module bottom.
 - The GUI window is undecorated (`overrideredirect(True)`) with a custom title bar drawn via `create_title_bar()`. The title bar uses Canvas widgets for pixel-precise min/max/close buttons.
 - Window icon (title bar): `icons/pdf-red.ico`. Exe icon (build): `icons/pdf-blue.ico`.
+- PDF processing runs in a background thread (`threading.Thread`) to keep the GUI responsive. Progress is reported back to the GUI via `root.after()` calls.
+- `process_pdf()` in the core module uses `page.show_pdf_page()` (vector re-embedding) rather than rasterizing pages, which preserves quality and is more efficient.
 - There are no tests, linter config, or CI setup currently.
