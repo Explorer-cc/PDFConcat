@@ -41,7 +41,7 @@ class PDFConcatApp:
     def __init__(self, root):
         self.root = root
         self.root.title("PDFConcat")
-        self.root.geometry("700x900")
+        self.root.geometry("700x960")
         self.root.resizable(False, False)
         self.root.configure(bg=COLORS['bg'])
 
@@ -196,24 +196,28 @@ class PDFConcatApp:
         file_frame.grid(row=1, column=0, columnspan=3, sticky='ew', pady=(0, 10))
         file_frame.columnconfigure(0, weight=1)
 
-        # Input file
-        tk.Label(file_frame, text="Input PDF File:",
-                 bg=COLORS['surface'], fg=COLORS['text'],
-                 font=('Segoe UI', 9)).grid(row=0, column=0, sticky='w')
-        self.input_entry = ttk.Entry(file_frame, textvariable=self.input_path, width=50)
-        self.input_entry.grid(row=1, column=0, padx=(0, 10), sticky='ew')
-        self.input_entry.drop_target_register(DND_FILES)
-        self.input_entry.dnd_bind('<<Drop>>', self.on_drop)
+        # Input drop zone
+        self.drop_zone = tk.Frame(file_frame, bg=COLORS['surface'], height=180,
+                                  cursor='hand2', highlightbackground=COLORS['border'],
+                                  highlightthickness=2)
+        self.drop_zone.grid(row=0, column=0, columnspan=2, sticky='ew', pady=(0, 5))
+        self.drop_zone.grid_propagate(False)
+        self.drop_zone.columnconfigure(0, weight=1)
+        self.drop_zone.rowconfigure(0, weight=1)
 
-        self.input_btn = tk.Button(file_frame, text="Browse...",
-                                   command=self.select_input_file,
-                                   bg=COLORS['surface'], fg=COLORS['text'],
-                                   font=('Segoe UI', 9),
-                                   relief='solid', bd=1,
-                                   activebackground=COLORS['hover'],
-                                   activeforeground=COLORS['text'],
-                                   cursor='hand2', padx=12, pady=3)
-        self.input_btn.grid(row=1, column=1, padx=(0, 10))
+        # Drop zone inner content
+        self.drop_canvas = tk.Canvas(self.drop_zone, bg=COLORS['surface'],
+                                     highlightthickness=0, cursor='hand2')
+        self.drop_canvas.grid(row=0, column=0, sticky='nsew')
+        self._draw_drop_zone_placeholder()
+
+        # Bindings
+        self.drop_canvas.drop_target_register(DND_FILES)
+        self.drop_canvas.dnd_bind('<<Drop>>', self.on_drop)
+        self.drop_canvas.bind('<Button-1>', lambda e: self.select_input_file())
+        self.drop_canvas.bind('<Configure>', lambda e: self._redraw_drop_zone())
+        self.drop_canvas.bind('<Enter>', lambda e: self.drop_canvas.configure(bg=COLORS['hover']) or self.drop_zone.configure(highlightbackground=COLORS['accent']))
+        self.drop_canvas.bind('<Leave>', lambda e: self.drop_canvas.configure(bg=COLORS['surface']) or self.drop_zone.configure(highlightbackground=COLORS['border']))
 
         # Output file
         tk.Label(file_frame, text="Output PDF File:",
@@ -232,10 +236,7 @@ class PDFConcatApp:
                                     cursor='hand2', padx=12, pady=3)
         self.output_btn.grid(row=3, column=1, padx=(0, 10), pady=(10, 0))
 
-        # Drag tip
-        tk.Label(file_frame, text="Tip: You can drag and drop PDF files to the input box",
-                 font=('Segoe UI', 8), bg=COLORS['surface'],
-                 fg=COLORS['text_sec']).grid(row=4, column=0, columnspan=2, pady=(5, 0))
+
 
         # Parameter configuration area
         param_frame = tk.LabelFrame(main_frame, text="  Parameters  ",
@@ -384,16 +385,84 @@ class PDFConcatApp:
             btn.grid(row=r, column=c, padx=(0 if c == 0 else 5, 0), pady=pady)
 
     # ─── Business Logic (unchanged) ──────────────────────────────
+    def _draw_drop_zone_placeholder(self):
+        """Draw dashed border and placeholder text in the drop zone canvas"""
+        self.drop_canvas.delete('all')
+        w = self.drop_canvas.winfo_width() or 620
+        h = self.drop_canvas.winfo_height() or 120
+
+        # Dashed border
+        self.drop_canvas.create_rectangle(
+            8, 8, w - 8, h - 8,
+            outline=COLORS['border'], width=2, dash=(8, 4), tags='border')
+
+        # Upload arrow icon (simple lines)
+        cx, cy = w // 2, h // 2 - 12
+        self.drop_canvas.create_line(cx, cy - 14, cx, cy + 4,
+                                     fill=COLORS['text_sec'], width=2, tags='icon')
+        self.drop_canvas.create_line(cx - 8, cy - 6, cx, cy - 14,
+                                     fill=COLORS['text_sec'], width=2, tags='icon')
+        self.drop_canvas.create_line(cx + 8, cy - 6, cx, cy - 14,
+                                     fill=COLORS['text_sec'], width=2, tags='icon')
+
+        # Text
+        self.drop_canvas.create_text(
+            cx, cy + 22,
+            text="Click to select or drag & drop PDF file here",
+            fill=COLORS['text_sec'], font=('Segoe UI', 10), tags='text')
+
+    def _draw_drop_zone_filename(self):
+        """Draw selected filename in the drop zone"""
+        self.drop_canvas.delete('all')
+        w = self.drop_canvas.winfo_width() or 620
+        h = self.drop_canvas.winfo_height() or 120
+
+        # Solid accent border
+        self.drop_canvas.create_rectangle(
+            8, 8, w - 8, h - 8,
+            outline=COLORS['accent'], width=2, tags='border')
+
+        cx, cy = w // 2, h // 2 - 16
+        filename = Path(self.input_path.get()).name
+
+        # PDF icon
+        self.drop_canvas.create_text(cx, cy,
+                                     text="📄",
+                                     font=('Segoe UI', 18), tags='icon')
+
+        # Filename
+        self.drop_canvas.create_text(
+            cx, cy + 30,
+            text=filename,
+            fill=COLORS['text'], font=('Segoe UI', 11, 'bold'), tags='text')
+
+        # Subtitle
+        self.drop_canvas.create_text(
+            cx, cy + 52,
+            text="Click to change file",
+            fill=COLORS['text_sec'], font=('Segoe UI', 9), tags='subtext')
+
+    def _redraw_drop_zone(self):
+        """Redraw drop zone based on current state"""
+        if self.input_path.get():
+            self._draw_drop_zone_filename()
+        else:
+            self._draw_drop_zone_placeholder()
+
     def select_input_file(self):
         filename = filedialog.askopenfilename(
             title="Select PDF File",
-            filetypes=[("PDF files", "*.pdf"), ("All files", "*.*")]
+            filetypes=[("PDF files", "*.pdf")]
         )
         if filename:
+            if not filename.lower().endswith('.pdf'):
+                messagebox.showwarning("Warning", "Only PDF files are supported")
+                return
             self.input_path.set(filename)
             input_path = Path(filename)
             output_path = input_path.parent / f"{input_path.stem}_thumbnails.pdf"
             self.output_path.set(str(output_path))
+            self._redraw_drop_zone()
 
     def select_output_file(self):
         filename = filedialog.asksaveasfilename(
@@ -470,6 +539,10 @@ class PDFConcatApp:
         """Validate input parameters"""
         if not self.input_path.get():
             messagebox.showwarning("Warning", "Please select an input PDF file")
+            return False
+
+        if not self.input_path.get().lower().endswith('.pdf'):
+            messagebox.showwarning("Warning", "Input file must be a PDF file")
             return False
 
         if not self.output_path.get():
@@ -580,6 +653,7 @@ class PDFConcatApp:
                 input_path = Path(file_path)
                 output_path = input_path.parent / f"{input_path.stem}_thumbnails.pdf"
                 self.output_path.set(str(output_path))
+                self._redraw_drop_zone()
             else:
                 messagebox.showwarning("Warning", "Please drag and drop PDF files")
 
