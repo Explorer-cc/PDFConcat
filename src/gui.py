@@ -42,7 +42,7 @@ class PDFConcatApp:
         self.root = root
         self.root.title("PDFConcat")
         self.root.geometry("700x900")
-        self.root.minsize(700, 900)
+        self.root.resizable(False, False)
         self.root.configure(bg=COLORS['bg'])
 
         # Remove system title bar
@@ -51,9 +51,6 @@ class PDFConcatApp:
         # Track window state
         self._drag_x = 0
         self._drag_y = 0
-        self._maximized = False
-        self._restore_geometry = None
-
         # Variables
         self.input_path = tk.StringVar()
         self.output_path = tk.StringVar()
@@ -107,7 +104,6 @@ class PDFConcatApp:
 
         btn_defs = [
             (self._draw_close,    self.on_close,    True),
-            (self._draw_maximize, self.on_maximize, False),
             (self._draw_minimize, self.on_minimize, False),
         ]
 
@@ -127,7 +123,6 @@ class PDFConcatApp:
         for widget in (title_bar, self._title_text_widget):
             widget.bind('<ButtonPress-1>', self.on_title_press)
             widget.bind('<B1-Motion>', self.on_title_drag)
-            widget.bind('<Double-Button-1>', lambda e: self.on_maximize())
 
         # Bottom border line
         border_line = tk.Frame(self.root, bg=COLORS['title_border'], height=1)
@@ -139,12 +134,6 @@ class PDFConcatApp:
         """Draw ─ centered at (23, 20)"""
         canvas.delete('icon')
         canvas.create_line(16, 20, 30, 20, fill=color, width=2.0, tags='icon')
-
-    @staticmethod
-    def _draw_maximize(canvas, color):
-        """Draw □ centered at (23, 20)"""
-        canvas.delete('icon')
-        canvas.create_rectangle(18, 15, 28, 25, outline=color, width=1.5, tags='icon')
 
     @staticmethod
     def _draw_close(canvas, color):
@@ -168,34 +157,16 @@ class PDFConcatApp:
         canvas._draw_fn(canvas, COLORS['text'])
 
     def on_title_press(self, event):
-        if self._maximized:
-            return
         self._drag_x = event.x
         self._drag_y = event.y
 
     def on_title_drag(self, event):
-        if self._maximized:
-            return
         x = self.root.winfo_x() + event.x - self._drag_x
         y = self.root.winfo_y() + event.y - self._drag_y
         self.root.geometry(f"+{x}+{y}")
 
     def on_minimize(self):
         self.root.iconify()
-
-    def on_maximize(self):
-        if self._maximized:
-            # Restore
-            if self._restore_geometry:
-                self.root.geometry(self._restore_geometry)
-            self._maximized = False
-        else:
-            # Save current geometry and maximize
-            self._restore_geometry = self.root.geometry()
-            screen_w = self.root.winfo_screenwidth()
-            screen_h = self.root.winfo_screenheight()
-            self.root.geometry(f"{screen_w}x{screen_h}+0+0")
-            self._maximized = True
 
     def on_close(self):
         self.root.destroy()
