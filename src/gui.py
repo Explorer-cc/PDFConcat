@@ -171,6 +171,14 @@ class PDFConcatApp:
     def on_close(self):
         self.root.destroy()
 
+    # ─── Helpers ─────────────────────────────────────────────────
+    def _make_solid_button(self, parent, **kwargs):
+        """Create button with custom gray border via frame wrapper"""
+        wrapper = tk.Frame(parent, bg=COLORS['border'], padx=1, pady=1)
+        btn = tk.Button(wrapper, relief='flat', bd=0, **kwargs)
+        btn.pack(fill='both', expand=True)
+        return wrapper, btn
+
     # ─── Main Content ────────────────────────────────────────────
     def create_widgets(self):
         # Main frame
@@ -226,15 +234,15 @@ class PDFConcatApp:
         self.output_entry = ttk.Entry(file_frame, textvariable=self.output_path, width=50)
         self.output_entry.grid(row=3, column=0, padx=(0, 10), sticky='ew', pady=(10, 0))
 
-        self.output_btn = tk.Button(file_frame, text="Browse...",
-                                    command=self.select_output_file,
-                                    bg=COLORS['surface'], fg=COLORS['text'],
-                                    font=('Segoe UI', 9),
-                                    relief='solid', bd=1,
-                                    activebackground=COLORS['hover'],
-                                    activeforeground=COLORS['text'],
-                                    cursor='hand2', padx=12, pady=3)
-        self.output_btn.grid(row=3, column=1, padx=(0, 10), pady=(10, 0))
+        _f, self.output_btn = self._make_solid_button(
+            file_frame, text="Browse...",
+            command=self.select_output_file,
+            bg=COLORS['surface'], fg=COLORS['text'],
+            font=('Segoe UI', 9),
+            activebackground=COLORS['hover'],
+            activeforeground=COLORS['text'],
+            cursor='hand2', padx=12, pady=3)
+        _f.grid(row=3, column=1, padx=(0, 10), pady=(10, 0))
 
 
 
@@ -268,15 +276,15 @@ class PDFConcatApp:
                                 textvariable=self.rows)
         rows_spin.grid(row=0, column=4, padx=(0, 10))
 
-        auto_calc_btn = tk.Button(grid_frame, text="Auto Calculate Rows",
-                                  command=self.auto_calculate_rows,
-                                  bg=COLORS['surface'], fg=COLORS['text'],
-                                  font=('Segoe UI', 9),
-                                  relief='solid', bd=1,
-                                  activebackground=COLORS['hover'],
-                                  activeforeground=COLORS['text'],
-                                  cursor='hand2', padx=8, pady=2)
-        auto_calc_btn.grid(row=0, column=5)
+        _f, auto_calc_btn = self._make_solid_button(
+            grid_frame, text="Auto Calculate Rows",
+            command=self.auto_calculate_rows,
+            bg=COLORS['surface'], fg=COLORS['text'],
+            font=('Segoe UI', 9),
+            activebackground=COLORS['hover'],
+            activeforeground=COLORS['text'],
+            cursor='hand2', padx=8, pady=2)
+        _f.grid(row=0, column=5)
 
         # Quality settings
         quality_frame = tk.Frame(param_frame, bg=COLORS['surface'])
@@ -342,15 +350,15 @@ class PDFConcatApp:
                                      cursor='hand2', padx=20, pady=6)
         self.process_btn.grid(row=0, column=0, padx=(0, 10))
 
-        self.open_btn = tk.Button(button_frame, text="Open Output File",
-                                  command=self.open_output_file, state='disabled',
-                                  bg=COLORS['surface'], fg=COLORS['text'],
-                                  font=('Segoe UI', 10, 'bold'),
-                                  relief='solid', bd=1,
-                                  activebackground=COLORS['hover'],
-                                  activeforeground=COLORS['text'],
-                                  cursor='hand2', padx=20, pady=6)
-        self.open_btn.grid(row=0, column=1, padx=(0, 10))
+        _f, self.open_btn = self._make_solid_button(
+            button_frame, text="Open Output File",
+            command=self.open_output_file,
+            bg=COLORS['surface'], fg=COLORS['text'],
+            font=('Segoe UI', 10, 'bold'),
+            activebackground=COLORS['hover'],
+            activeforeground=COLORS['text'],
+            cursor='hand2', padx=20, pady=6)
+        _f.grid(row=0, column=1, padx=(0, 10))
 
         # Preset configurations
         preset_frame = tk.LabelFrame(main_frame, text="  Quick Presets  ",
@@ -375,14 +383,14 @@ class PDFConcatApp:
 
         for text, cmd, r, c in presets:
             pady = (5, 0) if r == 1 else (0, 0)
-            btn = tk.Button(btn_container, text=text, command=cmd,
-                            bg=COLORS['surface'], fg=COLORS['text'],
-                            font=('Segoe UI', 9),
-                            relief='solid', bd=1,
-                            activebackground=COLORS['hover'],
-                            activeforeground=COLORS['text'],
-                            cursor='hand2', padx=10, pady=3, width=14)
-            btn.grid(row=r, column=c, padx=(0 if c == 0 else 5, 0), pady=pady)
+            _f, btn = self._make_solid_button(
+                btn_container, text=text, command=cmd,
+                bg=COLORS['surface'], fg=COLORS['text'],
+                font=('Segoe UI', 9),
+                activebackground=COLORS['hover'],
+                activeforeground=COLORS['text'],
+                cursor='hand2', padx=10, pady=3, width=14)
+            _f.grid(row=r, column=c, padx=(0 if c == 0 else 5, 0), pady=pady)
 
     # ─── Business Logic (unchanged) ──────────────────────────────
     def _draw_drop_zone_placeholder(self):
@@ -432,13 +440,13 @@ class PDFConcatApp:
 
         # Filename
         self.drop_canvas.create_text(
-            cx, cy + 30,
+            cx, cy + 36,
             text=filename,
             fill=COLORS['text'], font=('Segoe UI', 11, 'bold'), tags='text')
 
         # Subtitle
         self.drop_canvas.create_text(
-            cx, cy + 52,
+            cx, cy + 58,
             text="Click to change file",
             fill=COLORS['text_sec'], font=('Segoe UI', 9), tags='subtext')
 
@@ -448,6 +456,49 @@ class PDFConcatApp:
             self._draw_drop_zone_filename()
         else:
             self._draw_drop_zone_placeholder()
+
+    def _draw_drop_zone_loading(self, filename, progress=0):
+        """Animate a green progress bar in the drop zone"""
+        self.drop_canvas.delete('all')
+        w = self.drop_canvas.winfo_width() or 620
+        h = self.drop_canvas.winfo_height() or 180
+        cx, cy = w // 2, h // 2
+
+        # Dashed border
+        self.drop_canvas.create_rectangle(
+            8, 8, w - 8, h - 8,
+            outline=COLORS['accent'], width=2, dash=(8, 4), tags='border')
+
+        # Loading text
+        self.drop_canvas.create_text(
+            cx, cy - 22,
+            text=f"Loading {filename}...",
+            fill=COLORS['text'], font=('Segoe UI', 10), tags='text')
+
+        # Progress bar background
+        bar_x1, bar_x2 = 40, w - 40
+        bar_y1, bar_y2 = cy, cy + 20
+        self.drop_canvas.create_rectangle(
+            bar_x1, bar_y1, bar_x2, bar_y2,
+            fill=COLORS['progress_trough'], outline='', tags='bar_bg')
+
+        # Progress bar fill
+        fill_x = bar_x1 + (bar_x2 - bar_x1) * progress / 100
+        self.drop_canvas.create_rectangle(
+            bar_x1, bar_y1, fill_x, bar_y2,
+            fill='#81C784', outline='', tags='bar_fill')
+
+        # Percentage text
+        self.drop_canvas.create_text(
+            cx, bar_y2 + 16,
+            text=f"{progress}%",
+            fill=COLORS['text_sec'], font=('Segoe UI', 9), tags='pct')
+
+        # Continue animation
+        if progress < 100:
+            self.root.after(30, lambda: self._draw_drop_zone_loading(filename, progress + 4))
+        else:
+            self.root.after(200, self._redraw_drop_zone)
 
     def select_input_file(self):
         filename = filedialog.askopenfilename(
@@ -460,9 +511,9 @@ class PDFConcatApp:
                 return
             self.input_path.set(filename)
             input_path = Path(filename)
-            output_path = input_path.parent / f"{input_path.stem}_thumbnails.pdf"
+            output_path = input_path.parent / f"{input_path.stem}_concatenation.pdf"
             self.output_path.set(str(output_path))
-            self._redraw_drop_zone()
+            self._draw_drop_zone_loading(input_path.name)
 
     def select_output_file(self):
         filename = filedialog.asksaveasfilename(
@@ -499,6 +550,9 @@ class PDFConcatApp:
 
     def apply_preset(self, columns, rows):
         """Apply preset configuration"""
+        if not self.input_path.get():
+            messagebox.showwarning("Warning", "Please select an input PDF file first")
+            return
         self.columns.set(columns)
         if rows is not None:
             self.rows.set(rows)
@@ -588,13 +642,17 @@ class PDFConcatApp:
         # Process in new thread
         threading.Thread(target=self.process_pdf_thread, daemon=True).start()
 
+    def _on_page_progress(self, current, total):
+        """Callback for per-page progress from core module"""
+        pct = int(10 + 85 * current / total)  # 10-95% range
+        self.update_progress(pct, f"Processing page {current}/{total}...")
+
     def process_pdf_thread(self):
         """PDF processing thread function"""
         try:
-            # Simulate progress update
-            self.update_progress(10, "Reading PDF file...")
+            self.update_progress(5, "Reading PDF file...")
 
-            # Call core processing function
+            # Call core processing function with progress callback
             process_pdf(
                 input_path=Path(self.input_path.get()),
                 output_path=Path(self.output_path.get()),
@@ -604,7 +662,8 @@ class PDFConcatApp:
                 orientation="landscape",
                 dpi=self.dpi.get(),
                 gap=self.gap.get(),
-                padding=self.padding.get()
+                padding=self.padding.get(),
+                progress_callback=self._on_page_progress
             )
 
             self.update_progress(100, "Processing complete!")
@@ -635,13 +694,18 @@ class PDFConcatApp:
 
     def open_output_file(self):
         """Open output file"""
+        if not self.input_path.get():
+            messagebox.showwarning("Warning", "Please select an input PDF file first")
+            return
+        if not self.output_path.get() or not Path(self.output_path.get()).exists():
+            messagebox.showwarning("Warning", "No output file available. Please process a PDF first.")
+            return
         output_file = self.output_path.get()
-        if output_file and Path(output_file).exists():
-            if sys.platform == 'win32':
-                import os
-                os.startfile(output_file)
-            else:
-                webbrowser.open(f'file://{output_file}')
+        if sys.platform == 'win32':
+            import os
+            os.startfile(output_file)
+        else:
+            webbrowser.open(f'file://{output_file}')
 
     def on_drop(self, event):
         """Handle file drag and drop"""
@@ -651,9 +715,9 @@ class PDFConcatApp:
             if file_path.lower().endswith('.pdf'):
                 self.input_path.set(file_path)
                 input_path = Path(file_path)
-                output_path = input_path.parent / f"{input_path.stem}_thumbnails.pdf"
+                output_path = input_path.parent / f"{input_path.stem}_concatenation.pdf"
                 self.output_path.set(str(output_path))
-                self._redraw_drop_zone()
+                self._draw_drop_zone_loading(input_path.name)
             else:
                 messagebox.showwarning("Warning", "Please drag and drop PDF files")
 

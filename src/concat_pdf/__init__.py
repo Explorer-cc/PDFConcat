@@ -38,6 +38,7 @@ def process_pdf(
     dpi: int = 150,
     gap: float = 3,  # Spacing between thumbnails (points), smaller to save space
     padding: float = 10,  # Page margins
+    progress_callback=None,  # Optional callback(current_page, total_pages) for progress reporting
 ) -> None:
     """
     Process PDF file to generate N×M grid merged thumbnail PDF
@@ -156,6 +157,10 @@ def process_pdf(
 
             # Draw black border
             page.draw_rect(img_rect, color=fitz.utils.getColor("black"), width=0.5)
+
+            # Report progress
+            if progress_callback:
+                progress_callback(idx + 1, total_pages)
 
     # Save output PDF
     output_doc.save(output_path, garbage=4, deflate=True)

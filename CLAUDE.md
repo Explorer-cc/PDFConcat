@@ -44,6 +44,7 @@ uv run python build.py
 
 - **务必使用 `uv run` 执行所有 Python 运行任务**，不要直接用 `python` 命令。包括运行 GUI、CLI、测试等一切需要执行 Python 的场景。
 - **构建前需先安装 PyInstaller**: `uv add pyinstaller --dev`（`build.py` 不会自动安装依赖）。
+- **Git 提交时不要添加 Claude 作为 contributor**，不要在 commit message 中附带 `Co-Authored-By` 行。
 
 ## Important Details
 
